@@ -16,7 +16,7 @@
 // along with accessor.  If not, see <http://www.gnu.org/licenses/>.
 
 //! # Example
-//! ```
+//! ```no_compile
 //! #![allow(dead_code)]
 //! #![allow(unused_variables)]
 //!
@@ -151,15 +151,24 @@
 
 use std::ops::Range;
 
-/// 有且只有两种字节序：Le(小端)，Be(大端)
+/// 有且只有两种字节序：Le(小端)，Be(大端)，Na(本地)
 #[derive(Copy, Clone)]
 pub enum Encode {
     Le,
     Be,
+    Na, // Native
 }
 
+// pub trait Endianness<T: AsRef<[u8]> + Sized> {
+//     fn to_be_bytes(self) -> T;
+//     fn to_le_bytes(self) -> T;
+//     fn from_le(x: Self) -> Self;
+//     fn from_be(x: Self) -> Self;
+// }
+
 pub trait Field {
-    /// 字段类型
+    /// 字段类型（我们希望输出的类型）
+    /// 实际上二进制格式中都是原始类型，如整型。
     type FieldType;
     /// TODO: BytesType 可以直接替换为 [u8; std::mem::size_of::<Self::FieldType>()]，但目前 rust 不支持这种写法
     type BytesType: AsRef<[u8]>;
@@ -184,7 +193,7 @@ pub trait Getter {
     fn getter(&self, encode: Encode) -> Self;
 
     /// out 将字段值赋值给 dest，并返回 Getter 自身的引用，方便链式调用一条语句输出多个值。
-    fn out<T: Field>(&self, dest: &mut T::FieldType) -> &Self {
+    fn out<'a, T: Field>(&'a self, dest: &mut T::FieldType) -> &'a Self {
         *dest = self.get::<T>();
         self
     }
@@ -197,7 +206,7 @@ pub trait Setter {
     /// ```not_run
     /// self.with::<Field1>(value1).with::<Field2>(value2);
     /// ```
-    fn with<T: Field + Mutable>(&self, value: T) -> &Self;
+    fn with<'a, T: Field + Mutable>(&'a self, value: T) -> &'a Self;
     fn setter(&self, encode: Encode) -> Self;
 }
 
